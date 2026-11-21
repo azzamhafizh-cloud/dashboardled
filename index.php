@@ -27,10 +27,10 @@
   </style>
 </head>
 <body>
-  <h1>Kontrol LED via MQTT (Mosquitto)</h1>
+  <h1>Kontrol LED via MQTT (EMQX)</h1>
 
   <div class="cfg">
-    Broker: <input id="host" placeholder="IP laptop">
+    Broker: <input id="host" placeholder="Host broker">
     Grup: <input id="grup" value="tim1" style="width:80px">
     <button onclick="connect()">Sambung</button>
   </div>
@@ -57,13 +57,14 @@
 
 <script>
 const PINS = ["26", "27"];
+const KELAS = "kelas-08A";           // ganti sesuai kelas, harus sama dengan di kode ESP32
 let client = null;
 let base = "";
 let st = {"26": null, "27": null};   // null = belum tahu kondisinya
 let espOnline = null;
 
 const el = id => document.getElementById(id);
-el("host").value ="broker.emqx.io";		//ganti alamat IP Broker
+el("host").value = "broker.emqx.io";
 
 function log(kelas, teks) {
   const d = document.createElement("div");
@@ -101,23 +102,23 @@ function connect() {
   if (client) client.end(true);
   const host = el("host").value.trim();
   const grup = el("grup").value.trim() || "tim1";
-  base = "kelas/" + grup;
+  base = KELAS + "/" + grup;
   st = {"26": null, "27": null};
   espOnline = null;
   render();
   setConn("Menyambung...", "wait");
 
-  // Browser memakai WebSocket (port 9001), bukan port 1883 seperti ESP32
-  const aman = location.protocol === "https:";  
-  const url = (aman ? "wss://" : "ws://") + host + ":" + (aman ? 8084 : 8083) + "/mqtt";  
-  client = mqtt.connect(url, { 
+  // Browser memakai WebSocket (ws:// port 8083 atau wss:// port 8084), bukan port 1883 seperti ESP32
+  const aman = location.protocol === "https:";
+  const url = (aman ? "wss://" : "ws://") + host + ":" + (aman ? 8084 : 8083) + "/mqtt";
+  client = mqtt.connect(url, {
     clientId: "web-" + Math.random().toString(16).slice(2, 8),
     reconnectPeriod: 2000
   });
 
   client.on("connect", () => {
     setConn("Terhubung ke broker", "ok");
-    log("sys", "Terhubung ke " + url); 
+    log("sys", "Terhubung ke " + url);
     const t1 = base + "/led/+/status";
     const t2 = base + "/esp32/status";
     client.subscribe([t1, t2], { qos: 1 });
